@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Copy of NEXUS | Gateway to Freedom جئیئترین نسخه",
+  "description": "A futuristic, cyberpunk-themed VPN gateway application with real-time status monitoring, subscription management, and AI-powered support.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
