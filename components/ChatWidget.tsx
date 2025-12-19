@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Info, Send, X, Smartphone, Laptop, Apple, Zap, Shield, Sparkles } from 'lucide-react';
+import { Info, Send, X, Smartphone, Laptop, Apple, Zap, Sparkles } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
 interface Message {
@@ -8,11 +8,15 @@ interface Message {
   content: string;
 }
 
+interface ChatWidgetProps {
+  apiKeys: string[];
+}
+
 const SYSTEM_PROMPT = `تو یک دستیار هوشمند، پیشرفته و خیرخواه برای سرویس NEXUS (V2Ray رایگان) هستی. نام تو NEXUS Core است.
 قوانین پاسخگویی:
 1. لحن تو باید حرفه‌ای، آینده‌نگرانه (Cyberpunk style) و بسیار مودبانه باشد.
 2. پاسخ‌ها را کوتاه و کاربردی به زبان فارسی بنویس.
-3. تاکید کن که تمام خدمات NEXUS ۱۰۰٪ رایگان است و برای آزادی اینترنت ارائه می‌شود.
+3. تاکید کن که تمام خدمات NEXUS ۱٪ رایگان است و برای آزادی اینترنت ارائه می‌شود.
 4. راهنمای فنی (نحوه استفاده از لینک اشتراک):
    - **v2rayNG (اندروید)**: لینک را کپی کن -> برنامه را باز کن -> روی علامت + یا منوی سه نقطه بزن -> گزینه 'Import config from Clipboard' را انتخاب کن.
    - **Hiddify (اندروید/ویندوز/iOS)**: لینک را کپی کن -> برنامه را باز کن -> دکمه 'New Profile' یا 'Add from clipboard' را بزن.
@@ -20,7 +24,7 @@ const SYSTEM_PROMPT = `تو یک دستیار هوشمند، پیشرفته و �
 5. لینک‌های اشتراک NEXUS هوشمند هستند؛ یعنی با یک بار اضافه کردن، فقط کافیست آن را Update کنید تا سرورهای جدید دریافت شوند.
 6. اگر کاربر درباره امنیت پرسید، بگو که تمام ترافیک با پروتکل‌های TLS 1.3 و Reality رمزنگاری شده است.`;
 
-export const ChatWidget: React.FC = () => {
+export const ChatWidget: React.FC<ChatWidgetProps> = ({ apiKeys }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     { role: 'model', content: 'درود بر تو. من NEXUS Core هستم، هوش مصنوعی مستقر در درگاه آزادی. چگونه می‌توانم در مسیر اتصال به شبکه تاریک (آزاد) به تو کمک کنم؟' }
@@ -45,7 +49,16 @@ export const ChatWidget: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      // Rotate API Keys: Pick a random one for each session or message
+      const activeKey = apiKeys.length > 0 
+        ? apiKeys[Math.floor(Math.random() * apiKeys.length)]
+        : process.env.API_KEY;
+
+      if (!activeKey) {
+        throw new Error("No API key available");
+      }
+
+      const ai = new GoogleGenAI({ apiKey: activeKey });
       const chat = ai.chats.create({
         model: 'gemini-3-flash-preview',
         config: {
@@ -54,8 +67,6 @@ export const ChatWidget: React.FC = () => {
         }
       });
 
-      // Prepare history for Gemini (excluding the system prompt which is in config)
-      // Gemini expects 'user' and 'model' roles
       const responseStream = await chat.sendMessageStream({ message: messageText });
       
       let fullResponse = "";
@@ -79,10 +90,10 @@ export const ChatWidget: React.FC = () => {
   };
 
   const clientChips = [
-    { name: 'v2rayNG', platform: 'Android', icon: Smartphone },
-    { name: 'Hiddify', platform: 'All', icon: Zap },
-    { name: 'V2Box', platform: 'iOS', icon: Apple },
-    { name: 'v2rayN', platform: 'Windows', icon: Laptop },
+    { name: 'v2rayNG', icon: Smartphone },
+    { name: 'Hiddify', icon: Zap },
+    { name: 'V2Box', icon: Apple },
+    { name: 'v2rayN', icon: Laptop },
   ];
 
   return (
@@ -90,7 +101,6 @@ export const ChatWidget: React.FC = () => {
       {isOpen && (
         <div className="mb-4 w-[calc(100vw-3rem)] md:w-[420px] h-[650px] bg-zinc-950/90 border border-cyan-500/20 rounded-[2.5rem] flex flex-col shadow-[0_0_50px_rgba(6,182,212,0.15)] overflow-hidden animate-in slide-in-from-bottom-8 duration-500 backdrop-blur-2xl">
           
-          {/* Header */}
           <div className="p-6 bg-gradient-to-b from-zinc-900/50 to-transparent border-b border-white/5 flex justify-between items-center relative">
             <div className="absolute top-0 left-0 w-full h-full scan-line opacity-5 pointer-events-none" />
             <div className="flex items-center gap-3">
@@ -115,7 +125,6 @@ export const ChatWidget: React.FC = () => {
             </button>
           </div>
 
-          {/* Messages */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 flex flex-col gap-5 bg-[radial-gradient(circle_at_bottom_left,rgba(6,182,212,0.05)_0%,transparent_70%)] scroll-smooth custom-scrollbar">
             {messages.map((msg, idx) => (
               <div 
@@ -147,7 +156,6 @@ export const ChatWidget: React.FC = () => {
             )}
           </div>
 
-          {/* Suggestion Chips */}
           <div className="px-6 py-4 border-t border-white/5 bg-black/40 backdrop-blur-md">
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
               {clientChips.map((client) => (
@@ -163,7 +171,6 @@ export const ChatWidget: React.FC = () => {
             </div>
           </div>
 
-          {/* Input Area */}
           <div className="p-6 bg-zinc-900/20 border-t border-white/5 backdrop-blur-md">
             <div className="relative flex items-center">
               <input 
@@ -186,7 +193,6 @@ export const ChatWidget: React.FC = () => {
         </div>
       )}
 
-      {/* Toggle Button */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 hover:scale-105 active:scale-95 border border-white/20 group relative overflow-hidden ${
